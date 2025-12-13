@@ -2,7 +2,6 @@ package com.julioberina.vaultkeep.controller;
 
 import com.julioberina.vaultkeep.model.Note;
 import com.julioberina.vaultkeep.repository.NoteRepository;
-import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -12,7 +11,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NoteController {
 	private final NoteRepository noteRepository;
-	private final EntityManager entityManager;
 
 	@GetMapping
 	public List<Note> getAllNotes() {
@@ -26,7 +24,6 @@ public class NoteController {
 
 	@GetMapping("search")
 	public List<Note> search(@RequestParam String query) {
-		String sql = "SELECT * FROM notes WHERE content LIKE '%" + query + "%'";
-		return entityManager.createNativeQuery(sql, Note.class).getResultList();
+		return noteRepository.findByContentContaining(query);
 	}
 }

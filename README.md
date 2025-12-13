@@ -39,14 +39,30 @@ The project serves as a sandbox for identifying common OWASP vulnerabilities (li
 
 ---
 
-## 🕵️ Vulnerability Showcase: SQL Injection
+## 🛡️ Security Status: SQL Injection
 
-**Current Status:** 🔴 VULNERABLE
+**Current Status:** 🟢 REMEDIATED
 
-The `GET /api/notes/search` endpoint currently uses `EntityManager` with raw string concatenation, making it vulnerable to **SQL Injection**.
+The `GET /api/notes/search` endpoint has been secured using **Spring Data JPA Parameterized Queries**.
 
-### 1. Setup (Seed Data)
-Create a few notes, including a "Secret" one:
+### 1. The Vulnerability (Historical)
+In the initial version (see commit history), the application used `EntityManager` with raw string concatenation:
+```java
+// BAD CODE (Vulnerable)
+String sql = "SELECT * FROM notes WHERE content LIKE '%" + query + "%'";
+```
+
+### 2. The Remediation (Current)
+The code was refactored to use the `NoteRepository` interface, which automatically handles parameter binding and escaping:
+```java
+// SECURE CODE (Fixed)
+return noteRepository.findByContentContaining(query);
+```
+
+### 3. Verification
+To verify the fix, you must first seed the database and then attempt the attack.
+
+**Step 1: Seed Data**
 ```bash
 # Create a Public Note
 curl -X POST http://localhost:8080/api/notes \
@@ -59,31 +75,27 @@ curl -X POST http://localhost:8080/api/notes \
   -d '{"title": "TOP SECRET", "content": "You should not see this!"}'
 ```
 
-### 2. The Attack (Proof of Concept)
-An attacker can inject a payload to bypass the search filter and dump the entire database.
-
-*   **Target:** Retrieve the "TOP SECRET" note while searching for "public".
-*   **Payload:** `public%' OR '1'='1' --`
-*   **Logic:** The query becomes `SELECT * FROM notes WHERE content LIKE '%public%' OR '1'='1'`. Since `'1'='1'` is always true, the database returns every row.
+**Step 2: Attempt Attack**
+**Attack Payload:** `public%' OR '1'='1' --`
 
 **Attack URL (Encoded):**
 ```
 http://localhost:8080/api/notes/search?query=public%25%27%20OR%20%271%27%3D%271%27%20--
 ```
-*(Note: The URL is encoded. The decoded payload is `public%' OR '1'='1' --`)*
 
 **Result:**
-The API returns **ALL** notes, including the "TOP SECRET" note, proving the injection was successful.
+*   **Before Fix:** Returned ALL notes (including "TOP SECRET").
+*   **After Fix:** Returns an **Empty List** (or only notes literally containing the attack string). The injection fails.
 
 ---
 
 ## 🛠️ Roadmap
 - [x] **Phase 1:** Build MVP with SQL Injection vulnerability.
-- [ ] **Phase 2:** Remediate SQLi using Spring Data JPA (`NoteRepository`).
+- [x] **Phase 2:** Remediate SQLi using Spring Data JPA (`NoteRepository`).
 - [ ] **Phase 3:** Implement CI/CD pipeline with Snyk SAST scanning.
 - [ ] **Phase 4:** Add Authentication (Spring Security) and demonstrate IDOR.
 
 ---
 
 ## ⚠️ Disclaimer
-This application contains **intentional security vulnerabilities**. It is for educational and demonstration purposes only. Do not deploy this code to a production environment without remediation.
+This application is for educational and demonstration purposes only. While the current version is remediated, previous commits contain intentional security vulnerabilities.
