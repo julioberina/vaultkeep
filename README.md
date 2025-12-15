@@ -9,7 +9,7 @@ The project serves as a sandbox for identifying common OWASP vulnerabilities (li
 *   **Framework:** Spring Boot 3
 *   **Build Tool:** Gradle
 *   **Database:** H2 (In-Memory)
-*   **Security:** Spring Security (Configured for research), Snyk (SAST)
+*   **Security:** Spring Security (Configured for research), Snyk (SCA)
 
 ## 🎯 Project Goals
 1.  **Demonstrate Vulnerabilities:** Intentionally implement "bad code" (e.g., raw SQL concatenation) to simulate real-world security flaws.
@@ -65,14 +65,10 @@ To verify the fix, you must first seed the database and then attempt the attack.
 **Step 1: Seed Data**
 ```bash
 # Create a Public Note
-curl -X POST http://localhost:8080/api/notes \
-  -H "Content-Type: application/json" \
-  -d '{"title": "Public Info", "content": "This is visible to the public."}'
+curl -X POST http://localhost:8080/api/notes   -H "Content-Type: application/json"   -d '{"title": "Public Info", "content": "This is visible to the public."}'
 
 # Create a Secret Note
-curl -X POST http://localhost:8080/api/notes \
-  -H "Content-Type: application/json" \
-  -d '{"title": "TOP SECRET", "content": "You should not see this!"}'
+curl -X POST http://localhost:8080/api/notes   -H "Content-Type: application/json"   -d '{"title": "TOP SECRET", "content": "You should not see this!"}'
 ```
 
 **Step 2: Attempt Attack**
@@ -89,10 +85,26 @@ http://localhost:8080/api/notes/search?query=public%25%27%20OR%20%271%27%3D%271%
 
 ---
 
+## 🔄 DevSecOps Pipeline
+
+**Current Status:** 🟢 ACTIVE
+
+A **GitHub Actions** workflow (`.github/workflows/devsecops.yml`) has been implemented to automate security testing on every push and pull request.
+
+### Pipeline Architecture
+1.  **Build Environment:** Ubuntu Latest with Java 21 (Temurin).
+2.  **Build Automation:** Compiles the application using Gradle.
+3.  **Security Scanning:** Integrated **Snyk** to perform Software Composition Analysis (SCA) on project dependencies.
+4.  **Security Gate:** The pipeline is configured to **fail the build** if any **High** severity vulnerabilities are detected (`--severity-threshold=high`).
+
+This ensures that no critical vulnerabilities can be merged into the `main` branch, effectively "Shifting Security Left."
+
+---
+
 ## 🛠️ Roadmap
 - [x] **Phase 1:** Build MVP with SQL Injection vulnerability.
 - [x] **Phase 2:** Remediate SQLi using Spring Data JPA (`NoteRepository`).
-- [ ] **Phase 3:** Implement CI/CD pipeline with Snyk SAST scanning.
+- [x] **Phase 3:** Implement CI/CD pipeline with Snyk Security scanning.
 - [ ] **Phase 4:** Add Authentication (Spring Security) and demonstrate IDOR.
 
 ---
