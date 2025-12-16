@@ -1,5 +1,6 @@
 package com.julioberina.vaultkeep.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -16,5 +17,7 @@ public class Note {
 	private Long id;
 	private String title;
 	private String content;
+
+	@JsonIgnore
 	private String owner;
 }

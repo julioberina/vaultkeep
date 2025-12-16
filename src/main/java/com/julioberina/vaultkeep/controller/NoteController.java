@@ -3,8 +3,12 @@ package com.julioberina.vaultkeep.controller;
 import com.julioberina.vaultkeep.model.Note;
 import com.julioberina.vaultkeep.repository.NoteRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.List;
 
 @RestController
@@ -24,15 +28,14 @@ public class NoteController {
 		return noteRepository.save(note);
 	}
 
-	// ---------------------------------------------------------
-	// 🚨 VULNERABLE ENDPOINT (IDOR) 🚨
-	// This method allows User A to read User B's notes by just guessing the ID.
-	// It does NOT check if the 'owner' matches the 'authentication.getName()'.
-	// ---------------------------------------------------------
 	@GetMapping("{id}")
-	public Note getNoteById(@PathVariable("id") Long id) {
-		return noteRepository.findById(id)
-			.orElseThrow(() -> new RuntimeException("Note not found"));
+	public ResponseEntity<Note> getNoteById(@PathVariable("id") Long id, Authentication authentication) {
+		// Security Check: Fetch the note ONLY if it belongs to the logged-in user.
+		// If the ID exists but belongs to someone else, this returns empty (404 Not Found).
+		Note note = noteRepository.findByIdAndOwner(id, authentication.getName())
+			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Note not found"));
+
+		return ResponseEntity.ok(note);
 	}
 
 	@GetMapping("search")
