@@ -1,5 +1,6 @@
 package com.julioberina.vaultkeep.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -13,7 +14,10 @@ import lombok.*;
 public class Note {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	Long id;
-	String title;
-	String content;
+	private Long id;
+	private String title;
+	private String content;
+
+	@JsonIgnore
+	private String owner;
 }
