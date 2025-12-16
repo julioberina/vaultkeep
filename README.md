@@ -9,7 +9,7 @@ The project serves as a sandbox for identifying common OWASP vulnerabilities (li
 *   **Framework:** Spring Boot 3
 *   **Build Tool:** Gradle
 *   **Database:** H2 (In-Memory)
-*   **Security:** Spring Security (Configured for research), Snyk (SCA)
+*   **Security:** Spring Security 6 (Configured for research), Snyk (SCA)
 
 ## 🎯 Project Goals
 1.  **Demonstrate Vulnerabilities:** Intentionally implement "bad code" (e.g., raw SQL concatenation) to simulate real-world security flaws.
@@ -85,6 +85,70 @@ http://localhost:8080/api/notes/search?query=public%25%27%20OR%20%271%27%3D%271%
 
 ---
 
+## 🛡️ Security Status: IDOR (Insecure Direct Object Reference)
+
+**Current Status:** 🔴 VULNERABLE (Intentional)
+
+The application now implements **Spring Security** with Basic Auth, but the `GET /api/notes/{id}` endpoint contains a critical **IDOR** vulnerability.
+
+### 1. The Setup (Authentication)
+I implemented `InMemoryUserDetailsManager` with two users:
+*   **User:** `user` / `password`
+*   **Admin:** `admin` / `admin`
+
+I also implemented a **Trusted Identity** pattern where notes are automatically assigned an `owner` based on the logged-in user:
+```java
+// Securely assigning ownership
+note.setOwner(authentication.getName());
+```
+
+### 2. The Vulnerability
+While the "List View" (`GET /api/notes`) correctly filters notes by owner, the "Detail View" (`GET /api/notes/{id}`) **does not check ownership**. It simply fetches the note by ID, regardless of who is asking.
+
+```java
+// VULNERABLE CODE
+@GetMapping("{id}")
+public Note getNoteById(@PathVariable Long id) {
+    // 🚨 No check to see if the 'owner' matches the 'authentication.getName()'
+    return noteRepository.findById(id).orElseThrow(...);
+}
+```
+
+### 3. Verification (The Attack)
+To reproduce this vulnerability, log in as `user` and attempt to steal a note belonging to `admin`.
+
+**Step 1: Create Notes (Seed Data)**
+```bash
+# 1. Create a note as 'user' (This will get ID: 1)
+curl -u user:password -X POST http://localhost:8080/api/notes \
+     -H "Content-Type: application/json" \
+     -d '{"title": "User Note", "content": "I am a standard user."}'
+
+# 2. Create a SECRET note as 'admin' (This will get ID: 2)
+curl -u admin:admin -X POST http://localhost:8080/api/notes \
+     -H "Content-Type: application/json" \
+     -d '{"title": "ADMIN SECRETS", "content": "Launch codes: 12345"}'
+```
+
+**Step 2: Verify Access Control (The "Good" Path)**
+Check that `user` can only see their own notes in the list.
+```bash
+curl -u user:password http://localhost:8080/api/notes
+# Result: Returns ONLY the "User Note". The Admin note is hidden.
+```
+
+**Step 3: Execute IDOR Attack**
+Now, as `user`, try to access the Admin's note directly by guessing its ID (`2`).
+```bash
+curl -u user:password http://localhost:8080/api/notes/2
+```
+
+**Result:**
+*   **Expected (Secure):** 403 Forbidden or 404 Not Found.
+*   **Actual (Vulnerable):** Returns the **ADMIN SECRETS** note. 🚨
+
+---
+
 ## 🔄 DevSecOps Pipeline
 
 **Current Status:** 🟢 ACTIVE
@@ -105,9 +169,10 @@ This ensures that no critical vulnerabilities can be merged into the `main` bran
 - [x] **Phase 1:** Build MVP with SQL Injection vulnerability.
 - [x] **Phase 2:** Remediate SQLi using Spring Data JPA (`NoteRepository`).
 - [x] **Phase 3:** Implement CI/CD pipeline with Snyk Security scanning.
-- [ ] **Phase 4:** Add Authentication (Spring Security) and demonstrate IDOR.
+- [x] **Phase 4:** Add Authentication (Spring Security) and demonstrate IDOR.
+- [ ] **Phase 5:** Remediate IDOR using `@PostAuthorize` or Service-layer checks.
 
 ---
 
 ## ⚠️ Disclaimer
-This application is for educational and demonstration purposes only. While the current version is remediated, previous commits contain intentional security vulnerabilities.
+This application is for educational and demonstration purposes only. While parts of the application are remediated, it currently contains intentional security vulnerabilities (IDOR) for research purposes.

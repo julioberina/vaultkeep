@@ -13,7 +13,8 @@ import lombok.*;
 public class Note {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	Long id;
-	String title;
-	String content;
+	private Long id;
+	private String title;
+	private String content;
+	private String owner;
 }
