@@ -9,7 +9,7 @@ The project serves as a sandbox for identifying common OWASP vulnerabilities (li
 *   **Framework:** Spring Boot 3
 *   **Build Tool:** Gradle
 *   **Database:** H2 (In-Memory)
-*   **Security:** Spring Security (Configured for research), Snyk (SCA)
+*   **Security:** Spring Security 6 (Configured for research), Snyk (SCA)
 
 ## 🎯 Project Goals
 1.  **Demonstrate Vulnerabilities:** Intentionally implement "bad code" (e.g., raw SQL concatenation, Broken Access Control) to simulate real-world security flaws.
