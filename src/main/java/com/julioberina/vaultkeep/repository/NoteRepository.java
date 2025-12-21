@@ -9,7 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface NoteRepository extends JpaRepository<Note, Long> {
-	List<Note> findByContentContaining(String content);
+	List<Note> findByContentContainingIgnoreCaseAndOwner(String content, String owner);
 	List<Note> findByOwner(String owner);
 	Optional<Note> findByIdAndOwner(Long id, String owner);
 }

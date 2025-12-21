@@ -9,54 +9,44 @@ The project serves as a sandbox for identifying common OWASP vulnerabilities (li
 *   **Framework:** Spring Boot 3
 *   **Build Tool:** Gradle
 *   **Database:** H2 (In-Memory)
-*   **Security:** Spring Security 6 (Configured for research), Snyk (SCA)
+*   **Security:** Spring Security 6, Snyk (SCA), Burp Suite (DAST)
 
 ## 🎯 Project Goals
 1.  **Demonstrate Vulnerabilities:** Intentionally implement "bad code" (e.g., raw SQL concatenation, Broken Access Control) to simulate real-world security flaws.
-2.  **Exploitation:** Verify flaws using manual penetration testing techniques (Burp Suite, cURL).
+2.  **Exploitation:** Verify flaws using manual penetration testing techniques (Burp Suite, Postman).
 3.  **Remediation:** Refactor code using secure patterns (e.g., JPA Parameterized Queries, Ownership Checks) to fix the flaws.
 4.  **Automation:** Integrate security scanning into the GitHub Actions pipeline.
 
 ---
 
-## ⚡ Quick Start
-
-### Prerequisites
-*   Java 21 installed
-*   Git
-
-### Installation
-1.  Clone the repository:
-    ```bash
-    git clone https://github.com/julioberina/vaultkeep.git
-    cd vaultkeep
-    ```
-2.  Run the application:
-    ```bash
-    ./gradlew bootRun
-    ```
-3.  The API will be available at `http://localhost:8080`.
-
----
-
-## 🛡️ Security Status: SQL Injection
+## 🛡️ Security Status: SQL Injection (CWE-89)
 
 **Current Status:** 🟢 REMEDIATED
 
-The `GET /api/notes/search` endpoint has been secured using **Spring Data JPA Parameterized Queries**.
+The application features a search functionality that was used to demonstrate the difference between vulnerable string concatenation and secure parameterized queries.
 
-### 1. The Vulnerability (Historical)
-In the initial version (see commit history), the application used `EntityManager` with raw string concatenation:
+### 1. The Vulnerability (Lab Environment)
+A dedicated endpoint `GET /api/notes/search/vulnerable` was created to demonstrate **Boolean-based SQL Injection**. The code bypassed the safe Repository layer to use raw `EntityManager` queries:
+
 ```java
-// BAD CODE (Vulnerable)
+// BAD CODE (Vulnerable to SQLi)
 String sql = "SELECT * FROM notes WHERE content LIKE '%" + query + "%'";
+return entityManager.createNativeQuery(sql, Note.class).getResultList();
 ```
 
-### 2. The Remediation (Current)
-The code was refactored to use the `NoteRepository` interface, which automatically handles parameter binding and escaping:
+### 2. Exploitation (Burp Suite)
+The vulnerability was confirmed using **Burp Suite Professional/Community**:
+*   **Indicator:** Inputting a single quote (`'`) triggered a **500 Internal Server Error**, indicating a syntax break in the backend database.
+*   **Payload:** Using the payload `' OR '1'='1` in the query parameter allowed for a full database dump, bypassing all search filters.
+*   **Tooling:** Used **Burp Proxy** to intercept requests and **Burp Repeater** to perform manual payload injection.
+
+### 3. The Remediation (Production)
+The production endpoint `GET /api/notes/search` was secured using **Spring Data JPA Query Derivation**. This ensures that all user input is treated as data, never as executable code.
+
 ```java
 // SECURE CODE (Fixed)
-return noteRepository.findByContentContaining(query);
+// Enforces both Parameterization and Ownership (IDOR Protection)
+return noteRepository.findByContentContainingIgnoreCaseAndOwner(query, authentication.getName());
 ```
 
 ---
@@ -68,7 +58,7 @@ return noteRepository.findByContentContaining(query);
 The `GET /api/notes/{id}` endpoint has been secured using **Database-Level Ownership Checks**.
 
 ### 1. The Vulnerability (Historical)
-In the previous version (branch `feature/idor-vulnerability`), the application checked for a valid session but failed to verify if the requested note belonged to the authenticated user. This allowed any logged-in user to access any note by simply changing the ID in the URL (Insecure Direct Object Reference).
+In the previous version, the application checked for a valid session but failed to verify if the requested note belonged to the authenticated user.
 
 ```java
 // BAD CODE (Vulnerable)
@@ -116,27 +106,23 @@ curl -u user:password http://localhost:8080/api/notes/2
 
 **Current Status:** 🟢 ACTIVE
 
-A **GitHub Actions** workflow (`.github/workflows/devsecops.yml`) has been implemented to automate security testing on every push and pull request.
-
-### Pipeline Architecture
-1.  **Build Environment:** Ubuntu Latest with Java 21 (Temurin).
-2.  **Build Automation:** Compiles the application using Gradle.
-3.  **Security Scanning:** Integrated **Snyk** to perform Software Composition Analysis (SCA) on project dependencies.
-4.  **Security Gate:** The pipeline is configured to **fail the build** if any **High** severity vulnerabilities are detected (`--severity-threshold=high`).
-
-This ensures that no critical vulnerabilities can be merged into the `main` branch, effectively "Shifting Security Left."
+A **GitHub Actions** workflow (`.github/workflows/devsecops.yml`) automates security testing on every push.
+*   **SCA (Software Composition Analysis):** Integrated **Snyk** to find and block vulnerable dependencies.
+*   **Security Gate:** The pipeline is configured to **fail the build** if any **High** severity vulnerabilities are detected.
 
 ---
 
 ## 🛠️ Roadmap
-- [x] **Phase 1:** Build MVP with SQL Injection vulnerability.
-- [x] **Phase 2:** Remediate SQLi using Spring Data JPA (`NoteRepository`).
-- [x] **Phase 3:** Implement CI/CD pipeline with Snyk Security scanning.
-- [x] **Phase 4:** Add Authentication (Spring Security) and demonstrate IDOR.
-- [x] **Phase 5:** Remediate IDOR using Repository-level ownership checks.
-- [ ] **Phase 6:** Implement Role-Based Access Control (RBAC) for Admin features.
+- [x] **Phase 1-2:** Build MVP and implement basic SQLi remediation.
+- [x] **Phase 3:** Integrate CI/CD pipeline with Snyk Security scanning.
+- [x] **Phase 4-5:** Implement Spring Security and remediate IDOR vulnerabilities.
+- [x] **Phase 6:** Advanced SQLi Lab: Manual exploitation with Burp Suite & Parameterization.
+- [ ] **Phase 7:** Role-Based Access Control (RBAC) for Admin features.
+- [ ] **Phase 8:** Dependency Scanning & Snyk Integration (Advanced).
+- [ ] **Phase 9:** Logging, Monitoring, and Rate Limiting (Brute Force Protection).
+- [ ] **Phase 10:** Final Security Audit & `SECURITY.md` Documentation.
 
 ---
 
 ## ⚠️ Disclaimer
-This application is for educational and demonstration purposes only. While the current version is remediated, previous commits contain intentional security vulnerabilities.
+This application is for educational purposes only. It contains intentional security vulnerabilities in specific branches and endpoints to demonstrate AppSec principles.
