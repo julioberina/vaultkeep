@@ -24,10 +24,16 @@ repositories {
 	mavenCentral()
 }
 
+// Dependency versions
+var jjwtVersion = "0.11.5"
+
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.springframework.boot:spring-boot-starter-web")
+	implementation("io.jsonwebtoken:jjwt-api:$jjwtVersion")
+	implementation("io.jsonwebtoken:jjwt-impl:$jjwtVersion")
+	implementation("io.jsonwebtoken:jjwt-jackson:$jjwtVersion")
 	compileOnly("org.projectlombok:lombok")
 	runtimeOnly("com.h2database:h2")
 	annotationProcessor("org.projectlombok:lombok")
