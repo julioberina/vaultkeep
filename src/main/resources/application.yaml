@@ -5,3 +5,8 @@ spring:
 server:
   servlet:
     context-path: /api
+
+vaultkeep:
+  app:
+    jwtSecret: ${JWT_SECRET:defaultSecretForDevOnly}
+    jwtExpirationMs: 86400000
