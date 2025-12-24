@@ -9,13 +9,32 @@ The project serves as a sandbox for identifying common OWASP vulnerabilities (li
 *   **Framework:** Spring Boot 3
 *   **Build Tool:** Gradle
 *   **Database:** H2 (In-Memory)
-*   **Security:** Spring Security 6, Snyk (SCA), Burp Suite (DAST)
+*   **Security:** Spring Security 6, JJWT (JSON Web Token), Snyk (SCA), Burp Suite (DAST)
 
 ## 🎯 Project Goals
 1.  **Demonstrate Vulnerabilities:** Intentionally implement "bad code" (e.g., raw SQL concatenation, Broken Access Control) to simulate real-world security flaws.
 2.  **Exploitation:** Verify flaws using manual penetration testing techniques (Burp Suite, Postman).
 3.  **Remediation:** Refactor code using secure patterns (e.g., JPA Parameterized Queries, Ownership Checks) to fix the flaws.
 4.  **Automation:** Integrate security scanning into the GitHub Actions pipeline.
+
+---
+
+## 🛡️ Security Status: Identity & Access Management (JWT)
+
+**Current Status:** 🟢 IMPLEMENTED (Infrastructure)
+
+The application has moved from basic authentication to a stateless **JWT (JSON Web Token)** architecture to support secure, scalable API interactions.
+
+### 1. The Architecture
+Implemented a custom security filter chain that intercepts every request to validate identity before reaching the controller layer.
+*   **Authentication Filter:** A custom `OncePerRequestFilter` that extracts and validates Bearer tokens from the `Authorization` header.
+*   **Symmetric Signing:** Uses **HMAC-SHA256** with a managed secret key to ensure token integrity and prevent tampering.
+*   **Statelessness:** The server does not store session state, reducing the attack surface for Session Fixation and CSRF.
+
+### 2. Secure Implementation Details
+*   **Password Hashing:** (Pending Day 8) Integration of `BCryptPasswordEncoder` to ensure passwords are never stored in plain text.
+*   **Claims-Based Security:** Tokens include custom claims for **RBAC (Role-Based Access Control)**, allowing for granular permission checks (e.g., `ROLE_USER`, `ROLE_ADMIN`).
+*   **Error Handling:** Implemented a custom `AuthenticationEntryPoint` to return clean, type-safe JSON error responses (401 Unauthorized) instead of leaking server internals.
 
 ---
 
@@ -38,14 +57,12 @@ return entityManager.createNativeQuery(sql, Note.class).getResultList();
 The vulnerability was confirmed using **Burp Suite Professional/Community**:
 *   **Indicator:** Inputting a single quote (`'`) triggered a **500 Internal Server Error**, indicating a syntax break in the backend database.
 *   **Payload:** Using the payload `' OR '1'='1` in the query parameter allowed for a full database dump, bypassing all search filters.
-*   **Tooling:** Used **Burp Proxy** to intercept requests and **Burp Repeater** to perform manual payload injection.
 
 ### 3. The Remediation (Production)
 The production endpoint `GET /api/notes/search` was secured using **Spring Data JPA Query Derivation**. This ensures that all user input is treated as data, never as executable code.
 
 ```java
 // SECURE CODE (Fixed)
-// Enforces both Parameterization and Ownership (IDOR Protection)
 return noteRepository.findByContentContainingIgnoreCaseAndOwner(query, authentication.getName());
 ```
 
@@ -62,7 +79,6 @@ In the previous version, the application checked for a valid session but failed 
 
 ```java
 // BAD CODE (Vulnerable)
-// Only checks if the note exists, not who owns it
 Note note = noteRepository.findById(id)
         .orElseThrow(() -> new RuntimeException("Note not found"));
 return ResponseEntity.ok(note);
@@ -73,32 +89,10 @@ The code was refactored to enforce ownership at the database query level. The `N
 
 ```java
 // SECURE CODE (Fixed)
-// Returns empty (404) if the note exists but belongs to someone else
 Note note = noteRepository.findByIdAndOwner(id, userDetails.getUsername())
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Note not found"));
 return ResponseEntity.ok(note);
 ```
-
-### 3. Verification
-To verify the fix, you must create two users and attempt to cross-access data.
-
-**Step 1: Setup Users**
-*   **User A:** `user` / `password`
-*   **User B:** `admin` / `admin`
-
-**Step 2: Create Notes**
-1.  Log in as **User A** and create a note (e.g., ID: 1).
-2.  Log in as **User B** and create a note (e.g., ID: 2).
-
-**Step 3: Attempt Attack**
-Log in as **User A** and try to access User B's note:
-```bash
-curl -u user:password http://localhost:8080/api/notes/2
-```
-
-**Result:**
-*   **Before Fix:** Returned User B's note (200 OK).
-*   **After Fix:** Returns **404 Not Found**. The server denies the existence of the resource to unauthorized users, preventing ID Enumeration.
 
 ---
 
@@ -117,9 +111,9 @@ A **GitHub Actions** workflow (`.github/workflows/devsecops.yml`) automates secu
 - [x] **Phase 3:** Integrate CI/CD pipeline with Snyk Security scanning.
 - [x] **Phase 4-5:** Implement Spring Security and remediate IDOR vulnerabilities.
 - [x] **Phase 6:** Advanced SQLi Lab: Manual exploitation with Burp Suite & Parameterization.
-- [ ] **Phase 7:** Role-Based Access Control (RBAC) for Admin features.
-- [ ] **Phase 8:** Dependency Scanning & Snyk Integration (Advanced).
-- [ ] **Phase 9:** Logging, Monitoring, and Rate Limiting (Brute Force Protection).
+- [x] **Phase 7:** **JWT Infrastructure & Identity Management (Current)**
+- [ ] **Phase 8:** Auth Controller (Login/Register) & Password Hashing.
+- [ ] **Phase 9:** Role-Based Access Control (RBAC) for Admin features.
 - [ ] **Phase 10:** Final Security Audit & `SECURITY.md` Documentation.
 
 ---
