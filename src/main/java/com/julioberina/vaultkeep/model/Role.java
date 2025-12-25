@@ -5,8 +5,6 @@ import lombok.*;
 
 @Entity
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 @Getter
 @Setter
 @Table(name = "roles")
@@ -18,4 +16,8 @@ public class Role {
 	@Enumerated(EnumType.STRING)
 	@Column(length = 20)
 	private ERole name;
+
+	public Role(ERole name) {
+		this.name = name;
+	}
 }

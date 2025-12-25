@@ -46,6 +46,7 @@ public class NoteController {
 	}
 
 	@GetMapping("search/vulnerable")
+	@SuppressWarnings("unchecked")
 	public List<Note> searchVulnerable(@RequestParam String query) {
 		String sql = "SELECT * FROM notes WHERE content LIKE '%" + query + "%'";
 		return entityManager.createNativeQuery(sql, Note.class).getResultList();
