@@ -57,27 +57,9 @@ public class AuthController {
 			return ResponseEntity.badRequest().body(new MessageResponse("Error: Username is already taken!"));
 
 		User user = new User(registerRequest.username(), passwordEncoder.encode(registerRequest.password()));
-		Set<String> strRoles = Optional.ofNullable(registerRequest.roles()).orElse(Collections.emptySet());
-
-		if (strRoles.isEmpty()) {
-			Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-				.orElseThrow(() -> new RuntimeException("Error: Default Role (ROLE_USER) not found in database."));
-			user.addRole(userRole);
-		} else {
-			strRoles.forEach(role -> {
-				String lowercaseRole = role.toLowerCase();
-
-				if (lowercaseRole.equals("admin")) {
-					Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
-						.orElseThrow(() -> new RuntimeException("Error: Admin Role not found."));
-					user.addRole(adminRole);
-				} else {
-					Role userRole = roleRepository.findByName(ERole.ROLE_USER)
-						.orElseThrow(() -> new RuntimeException("Error: User Role not found."));
-					user.addRole(userRole);
-				}
-			});
-		}
+		Role userRole = roleRepository.findByName(ERole.ROLE_USER)
+			.orElseThrow(() -> new RuntimeException("Error: Default Role (ROLE_USER) not found in database."));
+		user.addRole(userRole);
 
 		userRepository.save(user);
 		return ResponseEntity.ok(new MessageResponse("User registered successfully!"));

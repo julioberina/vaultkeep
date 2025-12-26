@@ -68,6 +68,8 @@ public class WebSecurityConfig {
 			.authorizeHttpRequests(auth ->
 				auth.requestMatchers("/auth/**").permitAll()
 					.requestMatchers("/test/**").permitAll()
+					.requestMatchers("/admin/**").hasRole("ADMIN")
+					.requestMatchers("/error").permitAll()
 					.requestMatchers("/h2-console/**").permitAll()
 					.anyRequest().authenticated());
 
