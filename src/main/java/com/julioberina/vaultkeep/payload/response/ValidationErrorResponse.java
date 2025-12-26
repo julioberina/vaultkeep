@@ -1,10 +1,11 @@
 package com.julioberina.vaultkeep.payload.response;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
-public record ErrorMessage(
+public record ValidationErrorResponse(
 	int statusCode,
 	LocalDateTime timestamp,
 	String message,
-	String description
+	Map<String, String> errors
 ) {}

@@ -102,6 +102,23 @@ return ResponseEntity.ok(note);
 
 ---
 
+
+---
+
+## 🛡️ Security Status: Privilege Escalation & Hardening
+
+**Current Status:** 🟢 REMEDIATED
+
+The application's registration flow was hardened to prevent **Broken Function Level Authorization** (Privilege Escalation).
+
+### 1. The Vulnerability (Mass Assignment)
+The initial registration endpoint allowed users to specify their own roles in the JSON request. An attacker could self-promote to an administrator by simply adding `"roles": ["admin"]` to their signup payload.
+
+### 2. The Remediation
+*   **DTO Hardening:** Removed the `roles` field from the `RegisterRequest` record to eliminate the attack vector at the entry point.
+*   **Logic Hardening:** Refactored the `AuthController` to hardcode the default `ROLE_USER` assignment, ensuring that administrative privileges can only be granted through secure, internal channels.
+*   **Validation:** Added regex patterns to ensure usernames are alphanumeric, preventing potential injection or spoofing attempts.
+
 ## 🔄 DevSecOps Pipeline
 
 **Current Status:** 🟢 ACTIVE
@@ -119,7 +136,7 @@ A **GitHub Actions** workflow (`.github/workflows/devsecops.yml`) automates secu
 - [x] **Phase 6:** Advanced SQLi Lab: Manual exploitation with Burp Suite & Parameterization.
 - [x] **Phase 7:** JWT Infrastructure & Identity Management.
 - [x] **Phase 8:** **Auth Controller (Login/Register) & Password Hashing (Current)**
-- [ ] **Phase 9:** Role-Based Access Control (RBAC) for Admin features.
+- [x] **Phase 9:** Role-Based Access Control (RBAC) & Input Validation.
 - [ ] **Phase 10:** Final Security Audit & `SECURITY.md` Documentation.
 
 ---
